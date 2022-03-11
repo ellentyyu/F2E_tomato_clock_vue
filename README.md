@@ -4,10 +4,10 @@
 https://ellentyyu.github.io/F2E_tomato_clock_vue/
 
 ## 功能
+* 新增及編輯代辦任務
 * 任務及時間切換
 * 倒數計時
 * 提示鈴聲
-* 新增及編輯代辦任務
 * 已完成任務統計圖表
 
 ## 技術
