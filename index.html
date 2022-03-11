@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>tomato clock</title>
+
+    <link rel="shortcut icon" href="./images/clock-solid.svg">
+    <meta name='description' content="tomato clock" />
+    <meta name="keywords" content="tomato clock, 番茄鐘">
+    <meta property="og:title" content="番茄鐘" />
+    <meta property="og:description" content="番茄鐘">
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="FB上的網址" />
+    <meta property="og:image" content="FB的圖片" />
+    <!-- <link rel="apple-touch-icon" href=""> -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300&display=swap" rel="stylesheet">
+    <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.14.0/css/all.min.css' />
+    <link rel="stylesheet" href="stylesheets/all.css">
+
+</head>
+
+<body style="transform-origin: left top; transform: scale(0.666667);">
+    <div id="app">
+        <div class="deco-top">
+            <img src="./images/deco-top.svg" alt="decoration">
+        </div>
+        <div class="deco-bottom">
+            <img src="./images/deco-bottom.svg" alt="decoration">
+        </div>
+        <div class="deco-right" :class="{'is-show':isShow}">
+            <img src="./images/deco-right.svg" alt="decoration">
+        </div>
+        <div class="deco-left">
+            <img src="./images/deco-left.svg" alt="decoration">
+        </div>
+        <header class="header">
+            <div class="logo-wrap">
+                <img src="./images/logo.svg" alt="logo">
+                <div class="title">
+                    <h1 class="slogan">To-Do-List Alarm System</h1>
+                    <!-- <img src="./images/To-Do-List Alarm System.svg" alt="To-Do-List alarm system"> -->
+                </div>
+            </div>
+            <div class="hamburger" :class="{'is-show':isShow}" @click="showMenu">
+                <span class="item-1"></span>
+                <span class="item-2"></span>
+                <span class="item-3"></span>
+            </div>
+        </header>
+        <div class="main" @click="doneEdit">
+            <!-- 左側新增任務 -->
+            <form class="add-task" :class="{'to-side':isShow}">
+                <input type="text" v-model="newTodo" @keyup.enter="addTodo" placeholder="Add a new task...">
+                <a href="#" class="plus fas fa-plus" @click.prevent="addTodo"></a>
+                <!-- <div class="plus" @click="addTodo"></div> -->
+                <!-- <i class="fas fa-plus"></i> -->
+            </form>
+            <!-- 鐘面 -->
+            <div class="timer-wrap" :class="{'to-side':isShow}">
+                <svg width="637px" height="637px">
+                    <circle class="cir1" cx="318.5" cy="318.5" r="315" :style="{strokeDashoffset: dashOffset}" />
+                    <circle class="cir2" cx="318.5" cy="318.5" r="315" />
+                </svg>
+                <p class="curr-task" v-if="todosOfDate.length!==0 && todosOfDate.length==todayDone">All done!!</p>
+                <p class="curr-task" v-else-if="todosOfDate.length==0">Add some tasks...</p>
+                <p class="curr-task" v-else>{{todosUndone[0].title}}</p>
+                <p class="timer">{{minutes}}：{{seconds}}</p>
+                <!-- <p class="next" :class="{'pulse':isPulse}" v-if="totalSec==0">next task?</p> -->
+                <ul class="timer-btns">
+                    <li>
+                        <a href="#" @click.prevent="switchRing">
+                            <i class="fas fa-bell" v-if="isRing=='on'"></i>
+                            <i class="fas fa-bell-slash" v-else></i>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" :class="{'active':isStart}" @click.prevent="isStart=!isStart; countDown()">
+                            <i class="fas fa-play" v-if="!isStart"></i>
+                            <i class="fas fa-pause" v-else></i>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="forward" :class="{'pulse':isPulse}" @click.prevent="goNext">
+                            <i class="fas fa-step-forward"></i>
+                        </a>
+                    </li>
+                </ul>
+                <p class="next-task" v-if="todosUndone[1]">Next: {{todosUndone[1].title}}</p>
+            </div>
+            <!-- 右側選單按鈕 -->
+            <nav class="setting-btns" :class="{'is-show':isShow}" @click="selectSetting">
+                <a href="#" class="fas fa-list" id="one" :class="{'selected':'one'==selectedItem}"></a>
+                <a href="#" class="fas fa-chart-line" id="two" :class="{'selected':'two'==selectedItem}"
+                    @click="renderChart"></a>
+                <a href="#" class="fas fa-cog" id="three" :class="{'selected':'three'==selectedItem}"></a>
+            </nav>
+            <!-- 右側選單1~3 -->
+            <div class="aside-position aside-content todos" :class="{'is-move':'one'==selectedItem}">
+                <form class="task-input-wrap">
+                    <input class="new-task-input" type="text" v-model="newTodo" @keyup.enter="addTodo"
+                        placeholder="Add a new task...">
+                    <button class="fas fa-plus" type="button" @click="addTodo"></button>
+                </form>
+                <form class="date-input-wrap">
+                    <input class="date-input far fa-calendar" v-model="currDate" type="date">
+                </form>
+                <ul class="todo-list">
+                    <li class="todo-item" v-for="item in todosOfDate" :key="item.id" @click.stop="" @dblclick.stop="editTodo(item)">
+                        <a href="#" @click="item.completed=!item.completed">
+                            <img v-if="item.completed == false" src="./images/checkbox.svg" width="30" height="30"
+                                alt="checkbox">
+                            <img v-else src="./images/checkbox-checked.svg" alt="checkbox">
+                        </a>
+                        <p class="todo-item-title" v-if="item.id !== cacheTodo.id">{{item.title}}</p>
+                        <input class="edit-todo-input" type="text" v-model="cacheTitle" v-if="item.id == cacheTodo.id" @keyup.enter="doneEdit(item)">
+                        <button type="button" class="rm-btn fas fa-times" @click="removeTodo(item)" aria-label="remove">
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            <div class="aside-position aside-content chart" :class="{'is-move':'two'==selectedItem}">
+                <div class="fulfilled-wrap">
+                    <div>
+                        <h2 class="fulfilled-title">Today</h2>
+                        <p class="fulfilled-nb">{{todayDone}}</p>
+                    </div>
+                    <div>
+                        <h2 class="fulfilled-title">Weekly</h2>
+                        <p class="fulfilled-nb">{{weekdaysDoneTotal}}</p>
+                    </div>
+                    <div>
+                        <h2 class="fulfilled-title">Total</h2>
+                        <p class="fulfilled-nb">{{totalDone}}</p>
+                    </div>
+                </div>
+                <div class="calendar-switch">
+                    <a href="#" class="fas fa-caret-left" @click.prevent="previousWeek"></a>
+                    <p>{{dateLabels[0]}} - {{dateLabels[6]}}</p>
+                    <a href="#" class="fas fa-caret-right" @click.prevent="nextWeek"></a>
+                </div>
+                <div class="chart-wrap" ref="chartWrap">
+                    <canvas id="myChart"></canvas>
+                </div>
+            </div>
+            <div class="aside-position aside-content setting" :class="{'is-move':'three'==selectedItem}">
+                <div class="time-setting">
+                    <h2>Time Setting</h2>
+                    <div class="setting-wrap">
+                        <div class="setting-item">
+                            <h3>Working Time</h3>
+                            <a href="#" class="selection"
+                                @click.prevent="setWorkDuration=!setWorkDuration; setRestDuration=false">{{currWorkDuration}}
+                                mins <i class="fas fa-chevron-down" :class="{'active': setWorkDuration}"></i></a>
+                            <ul class="options" :class="{'active': setWorkDuration}">
+                                <li v-for="item in workDuration"><a href="#"
+                                        @click.prevent="changeDuration(item)">{{item}} mins</a></li>
+                            </ul>
+                        </div>
+                        <div class="setting-item">
+                            <h3>Resting Time</h3>
+                            <a href="#" class="selection" @click.prevent="setRestDuration=!setRestDuration">5 mins <i
+                                    class="fas fa-chevron-down" :class="{'active': setRestDuration}"></i></a>
+                            <ul class="options" :class="{'active': setRestDuration}">
+                                <li><a href="#" @click.prevent="setRestDuration=false">5 mins</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="alarm-setting">
+                    <h2>Alarm Setting</h2>
+                    <div class="setting-wrap">
+                        <div class="setting-item">
+                            <label class="note-label" for="notification">Notification
+                                <input class="original-check" id="notification" type="checkbox" v-model="isRing"
+                                    true-value="on" false-value="off">
+                                <div class="custom-check">
+                                    <div class="custom-check-switch"></div>
+                                    <div class="custom-check-text">{{isRing}}</div>
+                                </div>
+                            </label>
+
+                        </div>
+                        <div class="setting-item">
+                            <h3>Ringtone</h3>
+                            <a href="#" class="selection" @click.prevent="setAudio=!setAudio"> {{currRingtone}} <i
+                                    class="fas fa-chevron-down" :class="{'active': setAudio}"></i></a>
+                            <ul class="options ring-op-bg" :class="{'active': setAudio}">
+                                <li><a href="#" @click.prevent="changeRingtone('basic')">basic</a></li>
+                                <li><a href="#" @click.prevent="changeRingtone('pikachiu')">pikachiu</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <audio ref="notification">
+            <source :src="`./audios/${currRingtone}.mp3`" type="audio/mpeg">
+            Your browser does not support the audio tag.
+        </audio>
+    </div>
+
+
+
+
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/vue@next"></script>
+    <script>
+        const app = Vue.createApp({
+            data() {
+                return {
+                    //按鈕效果
+                    isShow: false,
+                    isRing: 'on',
+                    isStart: false,
+                    isPulse: false,
+                    pulsation: null,
+                    selectedItem: '',
+                    //任務
+                    newTodo: '',
+                    todos: [],
+                    cacheTodo: {},
+                    cacheTitle: '',
+                    //時鐘
+                    counter: null,
+
+                    totalSec: 1500,
+                    timeFrame: 1500,
+                    dashOffset: 1979,
+
+                    currDate: '',
+                    today: '',
+                    currFirstDay: new Date(),
+
+                    everydayCompleted: {},
+                    setWorkDuration: false,
+                    setRestDuration: false,
+                    workDuration: [15, 25, 45, 60],
+                    currWorkDuration: 25,
+                    currRingtone: 'basic',
+                    setAudio: false,
+                }
+            },
+            methods: {
+                countDown() {
+                    //同一任務已歸零再倒數一次
+                    if (this.totalSec < 1) {
+                        this.totalSec = this.timeFrame;
+                        this.dashOffset = 1979;
+                    }
+                    //沒有任務
+                    if (this.todosUndone.length == 0) {
+                        this.isStart = false;
+                        return;
+                    }
+                    //暫停
+                    if (this.counter !== null) {
+                        clearInterval(this.counter);
+                        this.counter = null;
+                        return;
+                    }
+                    this.createTimer();
+                },
+                goNext() {
+                    if (this.todosUndone.length == 0) {
+                        return;
+                    }
+                    //不換位置
+                    if (this.todosUndone.length == 1 && this.totalSec > 0) {
+                        return
+                    }
+                    if (this.totalSec < 1) {
+                        //this.todosUndone[0].completed = true;
+                        this.totalSec = this.timeFrame;
+                        //return;
+                    }
+                    let id = this.todosUndone[0].id;
+                    //從總清單刪除 響應更新todosUndone
+                    let item = this.todos.find((item) => item.id == id);
+                    let index = this.todos.findIndex((item) => item.id == id);
+                    this.todos.splice(index, 1);
+                    this.todos.push(item);
+
+                    //this.totalSec = this.timeFrame;
+
+                },
+                createTimer() {
+                    this.counter = setInterval(() => {
+                        this.totalSec--;
+                        if (this.totalSec < 1) {
+                            clearInterval(this.counter);
+                            this.counter = null;
+                            this.isStart = !this.isStart; //倒數按鈕背景色清空
+                            if (this.isRing) {
+                                this.playRingtone();
+                            }
+                            return;
+                        }
+                    }, 1000);
+                },
+                selectSetting() {
+                    if (!event.target.getAttribute('id')) {
+                        return;
+                    }
+                    this.selectedItem = event.target.getAttribute('id');
+                    if (!this.isShow) {
+                        this.isShow = true;
+                    }
+                },
+                showMenu() {
+                    this.isShow = !this.isShow;
+                    if (this.isShow) {
+                        this.selectedItem = 'one';
+                    } else {
+                        this.selectedItem = '';
+                    }
+                },
+                getDate() {
+                    let d = new Date();
+                    let dd = d.getDate();
+                    let mm = (d.getMonth() + 1).toString();
+                    let yy = d.getFullYear();
+                    if(mm.length == 1) {
+                      mm = '0'+ mm;
+                    }
+                    this.today = `${yy}-${mm}-${dd}`;
+                    this.currDate = `${yy}-${mm}-${dd}`;
+                },
+                getFirstDate() {
+                    let d = new Date();
+                    let day = d.getDay();
+                    if (day !== 0) {
+                        d = new Date(d.setDate(d.getDate() - day));
+                    }
+                    this.currFirstDay = d;
+                },
+                addTodo() {
+                    let value = this.newTodo.trim();
+                    let timeStamp = Math.floor(Date.now());
+                    if (!value) {
+                        return;
+                    }
+                    this.todos.push({
+                        id: timeStamp,
+                        title: value,
+                        completed: false,
+                        date: this.currDate
+                    });
+                    this.newTodo = '';
+                },
+                editTodo(item) {
+                    this.cacheTodo = item;
+                    this.cacheTitle = item.title; //顯示原本任務
+                },
+                doneEdit(item) {
+                    item.title = this.cacheTitle;
+                    this.cacheTitle = '';
+                    this.cacheTodo = {};
+                },
+                removeTodo(item) {
+                    let newIndex;
+                    this.todos.forEach((todo, index) => {
+                        if (todo.id == item.id) {
+                            newIndex = index;
+                        }
+                    });
+                    this.todos.splice(newIndex, 1);
+                },
+                previousWeek() {
+                    this.currFirstDay = new Date(this.currFirstDay.getTime() - (7 * 24 * 60 * 60 * 1000));
+                    this.renderChart();
+                },
+                nextWeek() {
+                    this.currFirstDay = new Date(this.currFirstDay.getTime() + (7 * 24 * 60 * 60 * 1000));
+                    this.renderChart();
+                },
+                renderChart() {
+                    this.$refs.chartWrap.innerHTML = '<canvas id="myChart"></canvas>';
+                    this.createChart();
+                },
+                createChart() {
+                    const myChart = new Chart(
+                        document.getElementById('myChart'),
+                        {
+                            type: 'line',
+                            data: this.chartData,
+                            options: {
+                                plugins: {  // 'legend' now within object 'plugins {}'
+                                    legend: {
+                                        labels: {
+                                            color: "blue",
+                                            font: {
+                                                size: 16
+                                            },
+                                            display: false,
+                                            boxWidth: 0
+                                        }
+                                    }
+                                },
+                                scales: {
+                                    y: {  // not 'yAxes: [{' anymore (not an array anymore)
+                                        ticks: {
+                                            color: "rgba(242,240,201, 0.7)", // not 'fontColor:' anymore
+                                            // fontSize: 16,
+                                            font: {
+                                                size: 16, // 'size' now within object 'font {}'
+                                            },
+                                            stepSize: 2,
+                                            beginAtZero: true,
+                                        },
+                                        grid: {
+                                            borderWidth: 3,
+                                            borderColor: 'rgba(242,240,201, 0.2)',
+                                            color: 'rgba(242,240,201, 0.2)',
+                                        }
+                                    },
+                                    x: {  // not 'xAxes: [{' anymore (not an array anymore)
+                                        ticks: {
+                                            color: "rgba(242,240,201, 0.7)",  // not 'fontColor:' anymore
+                                            //fontSize: 14,
+                                            font: {
+                                                size: 16 // 'size' now within object 'font {}'
+                                            },
+                                            stepSize: 1,
+                                            beginAtZero: true
+                                        },
+                                        grid: {
+                                            borderWidth: 3,
+                                            lineWidth: 0,
+                                            borderColor: 'rgba(242,240,201, 0.2)',
+                                            color: 'rgba(242,240,201, 0.2)',
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    );
+                },
+                changeDuration(time) {
+                    //當前選擇時間
+                    this.currWorkDuration = time;
+                    //關閉選單
+                    this.setWorkDuration = false;
+                    //鐘面時間
+                    this.timeFrame = time * 60;
+                    this.totalSec = this.timeFrame;
+                    //時鐘歸零(以防在倒數鐘調整時間)
+                    this.dashOffset = 1979;
+
+                },
+                playRingtone() {
+                    let notification = this.$refs.notification;
+                    if (this.currRingtone == 'pikachiu') {
+                        notification.volume = .3;
+                    }
+                    else { notification.volume = 1; }
+                    notification.play();
+                },
+                changeRingtone(ringtone) {
+                    this.currRingtone = ringtone;
+                    let notification = this.$refs.notification;
+                    notification.load();
+                    this.setAudio = false
+                },
+                switchRing() {
+                    if (this.isRing == 'on') {
+                        this.isRing = 'off';
+                    } else {
+                        this.isRing = 'on';
+                    }
+
+                }
+            },
+            computed: {
+                minutes() {
+                    let mins = Math.floor(this.totalSec / 60).toString();
+                    if (mins.length == 1) {
+                        mins = 0 + mins;
+                    }
+                    return mins;
+                },
+                seconds() {
+                    let secs = (this.totalSec % 60).toString();
+                    if (secs.length == 1) {
+                        secs = 0 + secs;
+                    }
+                    return secs;
+                },
+                todosUndone() {
+                    return [...this.todosOfDate.filter((item) => item.completed == false)];
+                },
+                todosOfDate() {
+                    return [...this.todos.filter((item) => item.date == this.currDate)];
+                },
+                todayDone() {
+                    let todayAll = [...this.todos.filter((item) => item.date == this.today)];
+                    let todayDone = [...todayAll.filter((item) => item.completed == true)];
+                    return todayDone.length;
+                },
+                totalDone() {
+                    let totalDone = [...this.todos.filter(item => item.completed == true)];
+                    return totalDone.length;
+                },
+                // 當週日期 無年 x軸資料用
+                dateLabels() {
+                    let labels = [];
+                    for (let i = 0; i < 7; i++) {
+                        let d = new Date(this.currFirstDay.getTime() + (i * 24 * 60 * 60 * 1000));
+                        labels.push(`${d.getMonth() + 1}-${d.getDate()}`);
+                    }
+                    return labels;
+                },
+                // 當週日期 含年 過濾todos用
+                weekDates() {
+                    let weekDates = [];
+                    for (let i = 0; i < 7; i++) {
+                        let d = new Date(this.currFirstDay.getTime() + (i * 24 * 60 * 60 * 1000));
+                        weekDates.push(`${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`);
+                    }
+                    return weekDates;
+                },
+                weekdaysDoneAry() {
+                    let completedCount = [];
+                    this.weekDates.forEach(item => {
+                        if (this.everydayCompleted[item]) {
+                            completedCount.push(this.everydayCompleted[item]);
+                        } else {
+                            completedCount.push(0);
+                        }
+                    });
+                    return completedCount;
+                },
+                weekdaysDoneTotal() {
+                    let total = 0;
+                    this.weekdaysDoneAry.forEach((item) => {
+                        total += item;
+                    })
+                    return total;
+                },
+                // completedCount() {
+                //     return this.todosOfDate.length - this.todosUndone.length;
+                // },
+                //chart.js固定資料格式
+                chartData() {
+                    return {
+                        labels: this.dateLabels,
+                        datasets: [{
+                            label: '',
+                            backgroundColor: 'rgba(242,240,201, 0.1)',
+                            borderColor: '#F2F0C9',
+                            borderWidth: 1,
+                            pointBackgroundColor: 'rgba(242,240,201, 0.4)',
+                            // fillColor: '#F2F0C9',
+                            fill: true,
+                            data: this.weekdaysDoneAry,
+                        }]
+                    }
+                },
+            },
+            watch: {
+                totalSec(val, oldVal) {
+                    let i = oldVal - val;
+                    //倒數的時候
+                    if (i == 1) {
+                        this.dashOffset = this.dashOffset - i * (1979 / this.timeFrame);
+                    }
+                    if (val < 1) {
+                        this.pulsation = setInterval(() => { this.isPulse = !this.isPulse }, 1000);
+                    } else {
+                        this.isPulse = false;
+                        clearInterval(this.pulsation);
+                        this.pulsation = null;
+                    }
+                },
+                todosUndone(val, oldVal) {
+                    this.everydayCompleted[this.currDate] = this.todosOfDate.length - this.todosUndone.length;
+                    //check或unchecked任務時 要將時間時鐘歸零  
+                    this.totalSec = this.timeFrame;
+                    this.dashOffset = 1979;
+                },
+            },
+            mounted() {
+                this.getDate();
+                this.getFirstDate();
+                this.todos.push(
+                    {
+                        id: 1,
+                        title: 'Clean up bedroom',
+                        completed: false,
+                        date: this.currDate
+                    },
+                    {
+                        id: 2,
+                        title: 'Feed Garfield',
+                        completed: false,
+                        date: this.currDate
+                    },
+                    {
+                        id: 3,
+                        title: 'Finish essay on Potions',
+                        completed: true,
+                        date: this.currDate
+                    },
+                    {
+                        id: 4,
+                        title: 'Practice piano',
+                        completed: true,
+                        date: this.currDate
+                    },
+                );
+            }
+        });
+        app.mount('#app');
+
+    </script>
+
+
+    <script>
+    // 試寫的快進功能 data要新增isForward(boolean)和counterSpeed
+    //    重點在於每一次調整時間都要clearInterval和setInterval才會生效
+
+        /*  fastForward(){
+                          //無倒數(暫停或還沒開始)時按快進 只調時間
+                          if(this.counter == null && this.totalSec > 0){
+                              if(this.isForward){
+                                  this.counterSpeed = 1;
+                              }else{
+                                  this.counterSpeed = 1000;
+                              }
+                              return;
+                          }
+                          //倒數中快進
+                          if(this.isForward && this.counter !== null){
+                              this.counterSpeed = 1;
+                              clearInterval(this.counter);
+                              this.createTimer();
+                          }
+                          //倒數中取消快進
+                          if(!this.isForward && this.counter !== null){
+                              this.counterSpeed = 1000;
+                              clearInterval(this.counter);
+                              this.createTimer();
+                          }
+                          if(this.totalSec < 1){
+                              this.todosUndone[0].completed = true;
+                              this.totalSec = this.timeFrame;
+                              this.isForward = false;
+                          }
+                      }, */
+    </script>
+</body>
+
+</html>
