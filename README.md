@@ -18,4 +18,4 @@ https://ellentyyu.github.io/tomato_clock_vue/
 
 ## 聲明
 * 設計稿：[F2E活動投稿設計師 Polina](https://challenge.thef2e.com/user/1878?schedule=2784#works-2784)
-* 2021.11 作品。本網站僅供個人作品練習使用。
+* 2021.11 作品，本網站僅供個人作品練習使用
