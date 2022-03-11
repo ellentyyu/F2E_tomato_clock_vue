@@ -1,7 +1,7 @@
 # 電腦版番茄鐘
 
 ## DEMO
-https://ellentyyu.github.io/tomato_clock_vue/
+https://ellentyyu.github.io/F2E_tomato_clock_vue/
 
 ## 功能
 * 任務及時間切換
