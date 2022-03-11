@@ -8,7 +8,7 @@ https://ellentyyu.github.io/tomato_clock_vue/
 * 倒數計時
 * 提示鈴聲
 * 新增及編輯代辦任務
-* 完成任務統計圖表
+* 已完成任務統計圖表
 
 ## 技術
 * Vue.js
